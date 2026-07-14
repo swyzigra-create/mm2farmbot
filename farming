@@ -1,0 +1,89 @@
+-- Локальная переменная для отслеживания уникального ID запущенного цикла Autofarm
+local currentFarmSession = 0
+
+AutofarmSection:CreateToggle({
+    Title = "Autofarm",
+    Default = false,
+    Callback = function(state)
+        getgenv().Autofarm = state
+        if not state then return end
+        if not getgenv().AutofarmMethod then return end
+
+        -- Инкрементируем ID сессии, чтобы завершить предыдущие циклы, если они были
+        currentFarmSession = currentFarmSession + 1
+        local mySession = currentFarmSession
+
+        -- Безопасное получение RootPart
+        local function getRoot()
+            local char = Client.LocalPlayer.Character
+            return char and char:FindFirstChild("HumanoidRootPart")
+        end
+
+        if getgenv().AutofarmMethod == "Coins" then
+            while getgenv().Autofarm and currentFarmSession == mySession do
+                task.wait()
+                local root = getRoot()
+                local coinContainer = Workspace:FindFirstChild("CoinContainer", true)
+                local mainGui = Client.PlayerGui:FindFirstChild("MainGUI")
+                local cashBagVisible = mainGui and mainGui.Game.CashBag.Visible
+
+                if root and coinContainer and cashBagVisible then
+                    local coin = coinContainer:FindFirstChild("Coin_Server")
+                    if coin then
+                        repeat
+                            if not getgenv().Autofarm or currentFarmSession ~= mySession then break end
+                            -- Безопасная телепортация с проверкой существования койна
+                            if coin and coin.Parent then
+                                root.CFrame = CFrame.new(coin.Position - Vector3.new(0, 2.5, 0)) * CFrame.Angles(0, 0, math.rad(180))
+                            end
+                            RunService.Stepped:Wait()
+                        until not coin:IsDescendantOf(Workspace) or coin.Name ~= "Coin_Server"
+                        task.wait(1.8)
+                    end
+                else
+                    task.wait(1.5)
+                end
+            end
+        else
+            -- Режим XP
+            while getgenv().Autofarm and currentFarmSession == mySession do
+                task.wait() -- Заменено с wait() на task.wait()
+                local root = getRoot()
+                local mainGui = Client.PlayerGui:FindFirstChild("MainGUI")
+                
+                if root and mainGui and mainGui.Game.CashBag.Visible then
+                    root.CFrame = CFrame.new(-121.12338256836, 138.27394104004, 38.946128845215)
+                end
+            end
+        end
+    end
+})
+
+AutofarmSection:CreateDropdown({
+    Text = "Autofarm method",
+    Array = {"XP", "Coins"},
+    Callback = function(val)
+        getgenv().AutofarmMethod = val
+    end,
+})
+
+--<>----<>----<>----<>----<>----<>----<>--
+getgenv().SheriffAim = false
+SheriffSection:CreateToggle({
+    Title = "Silent aim",
+    Default = false,
+    Callback = function(state)
+        getgenv().SheriffAim = state
+    end
+})
+
+getgenv().GunAccuracy = 25
+SheriffSection:CreateSlider({
+    Title = "Accuracy",
+    Min = 0,
+    Max = 100,
+    Default = 25,
+    Callback = function(val)
+        getgenv().GunAccuracy = tonumber(val) or 25
+    end
+})
